@@ -1,0 +1,122 @@
+clc
+thetaA = deg2rad(30);
+S = 156;%absorber width
+W = S/sin(thetaA);%aperture width
+F = S/2*(1+sin(thetaA));%focal length
+x0 = -S/2+F*sin(thetaA);%apex of parabola
+y0 = S/2*(1+sin(thetaA))*cos(thetaA);%apex of parabola
+xmin = S*cos(thetaA);
+xmax =(S+W)*cos(thetaA);
+ymin = S/2*(1-sin(thetaA));
+x = xmin*cos(thetaA)-ymin*sin(thetaA)+x0;
+y = xmin*sin(thetaA)+ymin*cos(thetaA)+y0;
+xmatrix = [];
+ymatrix = [];
+for i = xmin:5:xmax
+    j = i^2/(4*F);
+    xnext = i*cos(thetaA)-j*sin(thetaA)+x0;
+    ynext = i*sin(thetaA)+j*cos(thetaA)+y0;
+    xmatrix = [xmatrix xnext];
+    ymatrix = [ymatrix ynext];
+
+end
+% Reflector section sketching from thetaA + pi/2 to 3pi/2 - thetaA
+Xref = r* sin(theta) - pRefTheta*cos(theta)
+Yref = -r*cos(theta)- pRefTheta*sin(theta)
+refmin = thetaA + (pi/2);
+refmax = (3*pi)/2 - thetaA;
+%% Create matrix of X an Y values of reflector for plotting in Excel
+% Reflector section
+xRefMatrix =[];
+yRefMatrix = [];
+for i=refmin:0.01:refmax
+    
+           
+    Xrefnext = r* sin(i) - (r*((thetaA +(pi/2)+i-2*thetaM + 2*tan(thetaM) -cos(i-thetaA)))/((1 + sin(i - thetaA))))*cos(i);
+    xRefMatrix = [xRefMatrix Xrefnext ];  
+    
+    Yrefnext = -r*cos(i)- r*((thetaA +(pi/2)+i-2*thetaM + 2*tan(thetaM) -cos(i-thetaA)))/((1 + sin(i - thetaA)))*sin(i);
+    yRefMatrix = [yRefMatrix Yrefnext];
+      
+end
+% upper section
+xInvMatrix = [];
+yInvMatrix = [];
+for i=invmin:0.05:invmax
+    
+    xInvNext = r* sin(i) - ((r+lg)*sin(thetaM) + r*(i -thetaM))*cos(i);
+    xInvMatrix = [xInvMatrix xInvNext];
+    
+    yInvNext = -r*cos(i)- ((r+lg)*sin(thetaM) + r*(i -thetaM))*sin(i);
+    yInvMatrix = [yInvMatrix yInvNext];
+    
+    
+end
+XrefPlot = transpose(xRefMatrix);
+YrefPlot = transpose(yRefMatrix);
+XinvPlot = transpose(xInvMatrix);
+YinvPlot = transpose(yInvMatrix);
+Xplot = [xInvMatrix xRefMatrix];
+Yplot = [yInvMatrix yRefMatrix];
+%plot(Xplot,Yplot);
+Excel = [transpose(Xplot) transpose(Yplot)];
+%% Calculate height of CPC and create truncated CPC
+height = max(Yplot) - min(Yplot)
+truncatedHeight = (1-truncPerc)*height % Angle at ymax?
+YtruncatedHeight = (1-truncPerc)*height + min(Yplot)
+% find angle at Y truncted height - make maximum of iterations for both x
+% and y for reflector section of CPC. Involute stays the same
+S = Yref - YtruncatedHeight
+YplotTrunc =[];
+XplotTrunc =[];
+for i=1:1:(length(Yplot))
+    
+    if (Yplot(i) < YtruncatedHeight )
+        % put in matrix 
+        YplotTrunc = [YplotTrunc Yplot(i)]
+        XplotTrunc = [XplotTrunc Xplot(i)]
+    
+        end
+        
+    
+end
+%% Plot CPCs in subplots
+%Plots full height CPC
+subplot(1,2,1)
+plot(Xplot,Yplot)
+hold on
+plot(-Xplot,Yplot)
+title('Full height CPC')
+x=0;
+y=0;
+ang=0:0.01:2*pi; 
+xp=r*cos(ang);
+yp=r*sin(ang);
+hold on
+plot(x+xp,y+yp);
+%Plots truncated CPC
+subplot(1,2,2)
+plot(XplotTrunc,YplotTrunc)
+hold on
+plot(-XplotTrunc,YplotTrunc)
+hold on
+plot(x+xp,y+yp);
+title('Truncated CPC')
+%Plot Outer surface 
+%r2 = r +lg;
+%ang=0:0.01:2*pi; 
+%xp=r2*cos(ang);
+%yp=r2*sin(ang);
+%plot(x+xp,y+yp);
+%% Write to txt file for solidworks
+% Have to add Z values for 3D shape
+TxtFull = [Xplot;Yplot];
+fid = fopen('FullCPC.txt','wt') 
+formatspec = ('%f %f 0 \n');
+fprintf(fid,formatspec,TxtFull); 
+fclose(fid)
+TxtTrunc = [XplotTrunc;YplotTrunc]
+fid = fopen('TruncatedCPC.txt','wt')
+formatspec = ('%f %f 0 \n');
+fprintf(fid,formatspec,TxtTrunc); 
+fclose all
